@@ -31,7 +31,6 @@ class RenderUtil_OT_CleanVisibilityKey(bpy.types.Operator):
                     
         return {'FINISHED'}
 
-
 class RenderUtil_OT_CreateHiddenAllCollection(bpy.types.Operator):
     bl_idname = "renderutils.createhiddenall"
     bl_label = "Hidden All Collection"
@@ -44,11 +43,6 @@ class RenderUtil_OT_CreateHiddenAllCollection(bpy.types.Operator):
 
         Command.parent(hidden_all, all)
 
-        for scene in bpy.data.scenes:
-            for v in scene.view_layers:
-                cols = Command.get_descendants(v.active_layer_collection)
-                for col in cols:
-                    if col.name == name:
-                        col.exclude = True
+        Command.set_collection_settings(hidden_all, exclude=True)
                     
         return {'FINISHED'}

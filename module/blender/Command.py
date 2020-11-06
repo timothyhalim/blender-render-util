@@ -11,6 +11,9 @@ def save( filepath=None, **kwargs ):
     return bpy.ops.wm.save_mainfile( filepath=filepath, **kwargs )
 
 # Scene
+def get_scene_by_name(name):
+    return next((object for object in bpy.data.scenes if object.name == name), None)
+
 def get_current_frame():
     return bpy.context.scene.frame_current
 
@@ -40,14 +43,14 @@ def parent(child, parent):
 
 # Selection
 
+def get_selection():
+    return bpy.context.selected_objects
+
 def select(objects):
     objects = objects if hasattr( objects, '__iter__' ) else [ objects ]
     for object in objects:
         bpy.context.view_layer.objects.active = object
         object.select_set(state=True)
-
-def clear_selection():
-    bpy.ops.object.select_all(action='DESELECT')
 
 def select_hierarchy(objects, exclude = [], caseSensitive = False, fullpath = False):
     clear_selection()
@@ -61,6 +64,10 @@ def select_hierarchy(objects, exclude = [], caseSensitive = False, fullpath = Fa
             objects = get_object_by_name(object)
         descendants = get_descendants(object)
         select([o for o in descendants if not o in exclude])
+
+def clear_selection():
+    bpy.ops.object.select_all(action='DESELECT')
+
 
 # Object
 
@@ -144,6 +151,26 @@ def add_objects_to_collection(collection, objects = [], move=False):
         else:
             print ("Adding {object} to {collection} Collection".format(object=o, collection=collection.name))
         collection.objects.link(o)
+
+def set_collection_settings(collection, scenes=[], exclude=None, indirect_only=None, holdout=None):
+    collection = create_collection(collection) if isinstance(collection, str) else collection
+    if not scenes:
+        scenes = bpy.data.scenes
+    else:
+        scenes = scenes if hasattr( scenes, '__iter__' ) else [ scenes ]
+        scenes = [get_scene_by_name(scene) for scene in scenes if isinstance(scene, str)]
+    
+    for scene in scenes:
+        for v in scene.view_layers:
+            cols = get_descendants(v.layer_collection)
+            for col in cols:
+                if col.name == collection.name:
+                    if exclude is not None:
+                        col.exclude = exclude
+                    if indirect_only is not None:
+                        col.indirect_only = indirect_only
+                    if holdout is not None:
+                        col.holdout = holdout
 
 # Clean Up
 
