@@ -29,5 +29,26 @@ class RenderUtil_OT_CleanVisibilityKey(bpy.types.Operator):
             Command.clear_object_animation(object, 'hide_viewport')
             Command.clear_object_animation(object, 'hide_render')
                     
+        return {'FINISHED'}
 
+
+class RenderUtil_OT_CreateHiddenAllCollection(bpy.types.Operator):
+    bl_idname = "renderutils.createhiddenall"
+    bl_label = "Hidden All Collection"
+    bl_description = "Create Hidden All Collection"
+
+    def execute(self, context):
+        name = "Hidden_All"
+        hidden_all = Command.create_collection(name)
+        all = Command.create_collection("ALL")
+
+        Command.parent(hidden_all, all)
+
+        for scene in bpy.data.scenes:
+            for v in scene.view_layers:
+                cols = Command.get_descendants(v.active_layer_collection)
+                for col in cols:
+                    if col.name == name:
+                        col.exclude = True
+                    
         return {'FINISHED'}
