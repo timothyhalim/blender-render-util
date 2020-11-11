@@ -35,7 +35,6 @@ classes = (RenderUtil_PT_Panel, RenderUtil_OT_RemoveAsset, RenderUtil_OT_CleanVi
 
 # register, unregister = bpy.utils.register_classes_factory(classes)
 
-
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
