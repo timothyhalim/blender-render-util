@@ -1,6 +1,6 @@
 import bpy
 
-from ..module.blender import Command
+from ...module.blender import Command
 
 class RenderUtil_OT_CleanVisibilityKey(bpy.types.Operator):
     bl_idname = "renderutils.cleanvisibilitykey"

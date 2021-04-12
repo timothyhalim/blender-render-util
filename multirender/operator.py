@@ -1,6 +1,6 @@
 import bpy
 
-class RenderUtil_OT_GetScenes(bpy.types.Operator):
+class MultiRender_OT_GetScenes(bpy.types.Operator):
     bl_idname = "renderutils.getscenes"
     bl_label = "Get Scenes"
     bl_description = "Get Scenes"
@@ -9,13 +9,11 @@ class RenderUtil_OT_GetScenes(bpy.types.Operator):
         context.window_manager.render_property.clear()
         for scene in bpy.data.scenes:
             render = context.window_manager.render_property.add()
-            # render.name = scene.name
             render.scene = scene
-            render.render = True   
 
         return {'FINISHED'}
 
-class RenderUtil_OT_RenderScenes(bpy.types.Operator):
+class MultiRender_OT_RenderScenes(bpy.types.Operator):
     bl_idname = "renderutils.renderscenes"
     bl_label = "Render Scenes"
     bl_description = "Render Scenes"
@@ -31,16 +29,16 @@ class RenderUtil_OT_RenderScenes(bpy.types.Operator):
 
     def pre(self, x, y, **kwargs):
         self.rendering = True
-        print("\n"*2)
-        print(f"Rendering {self.scene.name}")
-        print("\n"*2)
-
-    def post(self, x, y, **kwargs):
 
         # Restore
         self.scene.render.filepath = self.original_output
         self.scene.render.use_file_extension = self.use_file_extension
         
+        print("\n"*2)
+        print(f"Rendering {self.scene.name}")
+        print("\n"*2)
+
+    def post(self, x, y, **kwargs):
         self.render_job.remove(self.scene) # This is just to render the next
                           # image in another path
         self.rendering = False
@@ -59,6 +57,17 @@ class RenderUtil_OT_RenderScenes(bpy.types.Operator):
         
         self.stop = True
         
+    def set_render_slot(self, name = None):
+        if name is None:
+            name = self.scene.name if self.scene else None
+        if name:
+            render_slot = next((rs for rs in bpy.data.images["Render Result"].render_slots if rs.name == name), None)
+            if render_slot is None:
+                render_slot = bpy.data.images["Render Result"].render_slots.new(name=name)  
+
+            index = [rs for rs in bpy.data.images["Render Result"].render_slots].index(render_slot)
+            bpy.data.images["Render Result"].render_slots.active_index = index
+
     def execute(self, context):
         self.stop = False
         self.rendering = False
@@ -73,7 +82,7 @@ class RenderUtil_OT_RenderScenes(bpy.types.Operator):
         context.window_manager.modal_handler_add(self)
 
         scenes = context.window_manager.render_property
-        self.render_job = [scene.scene for scene in scenes if scene.render]
+        self.render_job = [scene.scene for scene in scenes if scene.renderable]
         self.frame = context.scene.frame_current
 
         return {"RUNNING_MODAL"}
@@ -104,50 +113,17 @@ class RenderUtil_OT_RenderScenes(bpy.types.Operator):
 
                 # Set Frame and filepath
                 self.scene.frame_set(self.frame)
+                context.scene.frame_set(self.frame)
+                # self.set_render_slot()
                 self.scene.render.filepath = self.scene.render.frame_path(frame=self.frame)
                 self.scene.render.use_file_extension = False
-
+                
                 bpy.ops.render.view_show("INVOKE_DEFAULT") # Open Render window
-                bpy.context.window.scene = self.scene # Change current scene
-                bpy.ops.render.render("INVOKE_DEFAULT", use_viewport = True, write_still = True)
+                # bpy.context.window.scene = self.scene # Change current scene
+                bpy.ops.render.render("INVOKE_DEFAULT", write_still = True, scene=self.scene.name)
         
         return {"PASS_THROUGH"}
         # This is very important! If we used "RUNNING_MODAL", this new modal function
         # would prevent the use of the X button to cancel rendering, because this
         # button is managed by the modal function of the render operator,
         # not this new operator!
-
-class Scene_UL_List(bpy.types.UIList):
-    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index, flt_flag):
-        # self.use_filter_show = True
-
-        if self.layout_type in {'DEFAULT', 'COMPACT'}:
-            layout.label(text=f"{item.name}")
-            layout.prop(item, "render", text="", toggle=True, icon="RESTRICT_RENDER_OFF" if item.render else "RESTRICT_RENDER_ON")
-
-        elif self.layout_type in {'GRID'}:
-            pass
-
-class Render_Property(bpy.types.PropertyGroup):
-    def get_name(self):
-        return getattr(self.scene, "name", "")
-    scene : bpy.props.PointerProperty(type=bpy.types.Scene)
-    name : bpy.props.StringProperty(get=get_name)
-    render : bpy.props.BoolProperty(default=True)
-
-
-classes = (RenderUtil_OT_GetScenes, RenderUtil_OT_RenderScenes, Scene_UL_List, Render_Property)
-def register_render_scene():
-    for cls in classes:
-        bpy.utils.register_class(cls)
-
-    bpy.types.WindowManager.render_property = bpy.props.CollectionProperty(type=Render_Property)
-    bpy.types.WindowManager.render_index = bpy.props.IntProperty()
-
-    
-def unregister_render_scene():
-    del bpy.types.WindowManager.render_property
-    del bpy.types.WindowManager.render_index
-
-    for cls in classes:
-        bpy.utils.unregister_class(cls)

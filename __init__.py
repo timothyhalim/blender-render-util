@@ -24,29 +24,16 @@ bl_info = {
 
 import bpy
 
-from .panel import RenderUtil_PT_Panel
-from .panel import register_render_scene
-from .panel import unregister_render_scene
-
-from .operator import RenderUtil_OT_RemoveAsset
-from .operator import RenderUtil_OT_CleanVisibilityKey
-from .operator import RenderUtil_OT_CreateHiddenAllCollection
-
-
-classes = (
-            RenderUtil_PT_Panel, 
-            RenderUtil_OT_RemoveAsset, RenderUtil_OT_CleanVisibilityKey, RenderUtil_OT_CreateHiddenAllCollection
-        )
+from . import renderutilities
+from . import multirender
 
 # register, unregister = bpy.utils.register_classes_factory(classes)
 
 def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
-    register_render_scene()
+    renderutilities.register()
+    multirender.register()
 
 def unregister():
-    unregister_render_scene()
-    for cls in classes:
-        bpy.utils.unregister_class(cls)
+    renderutilities.unregister()
+    multirender.unregister()
     

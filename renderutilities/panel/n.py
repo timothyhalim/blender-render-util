@@ -13,13 +13,3 @@ class RenderUtil_PT_Panel(bpy.types.Panel):
         layout.operator('renderutils.removeasset', text="Remove Selected Asset")
         layout.operator('renderutils.cleanvisibilitykey', text="Clean Selected Visibility Key")
         layout.operator('renderutils.createhiddenall', text="Create Hidden All Collection")
-
-        layout.operator('renderutils.getscenes', text="Reload Scenes")
-        layout.template_list(
-                "Scene_UL_List", 
-                "", 
-                context.window_manager , 
-                "render_property", 
-                context.window_manager , 
-                "render_index")
-        layout.operator('renderutils.renderscenes', text="Render Scenes")
