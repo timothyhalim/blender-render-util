@@ -1,0 +1,98 @@
+/*
+ * SimpleAO.osl by Timothy Halim (c)2020
+ * https://timo.ink
+ * Written for Lil Wild project
+ * on Infinite Frameworks Studios
+ * 30 June 2020
+ *
+ * based on Simple Ambient Occlusion by François GASTALDO
+ * tested on Blender 2.82
+ */
+ 
+//#include "stdosl.h"
+//#include "node_fresnel.h"
+//#include "oslutil.h"
+
+shader SimpleAO(
+    float Radius = 50.0 ,
+    float Spread = 45.0 ,
+    float Softness = 1.0 ,
+    float Gamma = 1.0 ,
+    int Samples = 8,
+    int Invert = 0 ,
+    int SelfOcclusion = 1 ,
+    int SurroundingOcclusion = 1 ,
+    int NormalDirection = 1 ,
+    int BackFaceDirection = 0 ,
+    output color Occlussion = color(0.0,0.0,0.0) , 
+)
+{
+    float occOut = 0.0 ;
+    
+    // For detecting self occlusion
+    float ObjectIndex = 1 ;
+    int trcu = getattribute("object:random", ObjectIndex) ;
+    
+    // Degrees to Radian conversion
+    float spreadAngle = radians(Spread); 
+    
+    float offset = 0.0007 ;
+    for( int i=0 ; i < Samples ; i++ ) {
+        offset += 0.001 ;
+        
+        vector traceVector = N + ( offset * cellnoise(P*(10000.0+i)) ) ;
+        if ( spreadAngle != 0.0 ) {
+            vector bruitvector = spreadAngle * noise("perlin", traceVector*(10000.0+i) );
+            traceVector +=  bruitvector ;
+        }
+        
+        // Trace Direction from point
+        float Dist, NormalDistance, BackFaceDistance = Radius ;
+        float ObjectId = 0 ;
+        if ( NormalDirection == 1 ) {
+            if ( trace (P, traceVector  , "maxdist" , Radius ) ) {
+                // If hit something, Update the NormalDistance and ObjectId to get distance and object id
+                int HitTrace = getmessage ("trace", "object:random" ,  ObjectId ) ;
+                HitTrace = getmessage ("trace", "hitdist" ,  NormalDistance ) ;
+                if ( ObjectId == ObjectIndex ) {  
+                    if (SelfOcclusion == 0 ) {
+                        NormalDistance = Radius ;
+                    }
+                } else {
+                    if (SurroundingOcclusion == 0) {
+                        NormalDistance = Radius ;
+                    }
+                }
+            } else {
+                NormalDistance = Radius ;
+            }
+        } 
+        if ( BackFaceDirection == 1 ) {
+            if ( trace (P, -traceVector  , "maxdist" , Radius ) ) {
+                int HitTrace = getmessage ("trace", "object:random" ,  ObjectId ) ;
+                HitTrace = getmessage ("trace", "hitdist" ,  BackFaceDistance ) ;
+                if ( ObjectId == ObjectIndex ) {  
+                    if (SelfOcclusion == 0 ) {
+                        BackFaceDistance = Radius ;
+                    }
+                } else {
+                    if (SurroundingOcclusion == 0) {
+                        BackFaceDistance = Radius ;
+                    }
+                }
+            } else {
+                BackFaceDistance = Radius ;
+            }
+        } 
+        Dist = min( NormalDistance , BackFaceDistance ) ;
+        occOut += Dist / Radius / Samples ;
+    }
+    // Outputs
+    if ( Invert == 1 ) {
+        occOut = pow(1.0 - occOut, Softness) ;
+    } else {
+        occOut = pow(occOut, 1/Softness) ;
+    }
+    occOut = pow( occOut , 1/Gamma ) ;
+    Occlussion = occOut;
+}
